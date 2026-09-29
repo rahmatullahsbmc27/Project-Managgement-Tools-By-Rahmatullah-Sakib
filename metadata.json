@@ -1,0 +1,6 @@
+{
+  "name": "Bizzgraph Ad Management SaaS",
+  "description": "High-density ad agency campaign management platform with soft glassmorphic UI, real-time spend tracking, 4-digit client IDs, Meta Graph API readiness, and mobile card view.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

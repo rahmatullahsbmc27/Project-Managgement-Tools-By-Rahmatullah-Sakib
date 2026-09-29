@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bizzgraph Client Portal - Real-time Campaign Live View</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body style="display:flex; align-items:center; justify-content:center; min-height:100vh; background:var(--bg-primary); padding:16px;">
+  <div class="table-card" style="width:480px; max-width:96vw; padding:20px; box-shadow:var(--shadow-lg);">
+    <div style="display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid var(--border-subtle); padding-bottom:12px; margin-bottom:14px;">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <div class="brand-icon">B</div>
+        <div>
+          <div style="font-weight:800; font-size:14px;">Bizzgraph Client View</div>
+          <div style="font-size:9.5px; color:var(--text-muted);">Your Business Grower • Live Reporting</div>
+        </div>
+      </div>
+      <span id="magicStatus" class="status-pill status-active"><span class="status-dot"></span>Loading</span>
+    </div>
+
+    <div id="magicContent" style="display:flex; flex-direction:column; gap:10px;">
+      <div>
+        <div id="magicClientName" style="font-size:18px; font-weight:800; color:var(--text-main);">Loading client...</div>
+        <div id="magicCampId" class="mono-id" style="font-size:11px;">#----</div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; background:var(--bg-subtle); padding:12px; border-radius:var(--radius-md);">
+        <div>
+          <div style="font-size:10px; color:var(--text-muted);">Total Spend to Date</div>
+          <div id="magicSpent" style="font-size:18px; font-weight:800; color:var(--text-main);">$0.00</div>
+        </div>
+        <div>
+          <div style="font-size:10px; color:var(--text-muted);">Allocated Budget</div>
+          <div id="magicBudget" style="font-size:18px; font-weight:800; color:var(--text-main);">$0.00</div>
+        </div>
+      </div>
+
+      <div style="font-size:11px; color:var(--text-muted); display:flex; flex-direction:column; gap:4px;">
+        <div><b>Targeting Direction:</b> <span id="magicDirection">Loading...</span></div>
+        <div><b>Ad Account:</b> <span id="magicAccount">Bizzgraph-Meta</span></div>
+        <div><b>Campaign Marketer:</b> <span id="magicMarketer">Rahmatullah Sakib</span></div>
+        <div><b>Latest Update:</b> <span id="magicNote">Campaign pacing normally.</span></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get('id');
+
+    async function loadMagicData() {
+      if (!id) {
+        document.getElementById('magicClientName').textContent = 'Invalid or expired magic link.';
+        return;
+      }
+      try {
+        const res = await fetch(`/api/magic/${id}`);
+        if (res.ok) {
+          const data = await res.json();
+          document.getElementById('magicClientName').textContent = data.client_name;
+          document.getElementById('magicCampId').textContent = `#${data.unique_id} • Meta Sync: #${data.meta_campaign_id || 'Active'}`;
+          document.getElementById('magicSpent').textContent = `$${Number(data.total_spent || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}`;
+          document.getElementById('magicBudget').textContent = `$${Number(data.total_budget || 0).toLocaleString()}`;
+          document.getElementById('magicDirection').textContent = data.direction || 'Conversion Campaign';
+          document.getElementById('magicAccount').textContent = data.current_ad_account || 'Bizzgraph Network';
+          document.getElementById('magicMarketer').textContent = data.marketer_name || 'Rahmatullah Sakib';
+          document.getElementById('magicNote').textContent = data.quick_notes || 'All metrics operational.';
+          
+          const st = document.getElementById('magicStatus');
+          st.className = `status-pill status-${(data.status || 'active').toLowerCase()}`;
+          st.innerHTML = `<span class="status-dot"></span>${data.status || 'Active'}`;
+        } else {
+          document.getElementById('magicClientName').textContent = 'Campaign not found.';
+        }
+      } catch (e) {
+        document.getElementById('magicClientName').textContent = 'Error loading campaign details.';
+      }
+    }
+    loadMagicData();
+  </script>
+</body>
+</html>

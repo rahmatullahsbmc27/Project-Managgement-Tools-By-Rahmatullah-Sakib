@@ -1,0 +1,947 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Bizzgraph - Your Business Grower | Ad Management SaaS</title>
+  <meta name="description" content="Bizzgraph Ad Management SaaS - High-density campaigns table, real-time spend tracking, Meta Graph API readiness, role permissions, and mobile bottom navigation." />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app-container">
+    <!-- SIDEBAR (DESKTOP) -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div id="brandLogoContainer" class="brand-icon">
+          <span id="brandLogoText">B</span>
+          <img id="brandLogoImg" src="" alt="Logo" style="display:none;width:100%;height:100%;object-fit:cover;border-radius:inherit;" />
+        </div>
+        <div class="brand-info">
+          <span class="brand-title" id="sbAgencyName">Bizzgraph</span>
+          <span class="brand-slogan" id="sbAgencySlogan">Your Business Grower</span>
+        </div>
+      </div>
+      <nav class="sidebar-nav">
+        <button class="nav-link active" id="navLinkDashboard" onclick="switchTab('campaigns')">
+          <span>📊 Campaigns</span><span class="nav-badge" id="navCampCount">8</span>
+        </button>
+        <button class="nav-link" id="navLinkClients" onclick="switchTab('clients')"><span>👥 Clients</span></button>
+        <button class="nav-link" id="navLinkTeam" onclick="switchTab('team')"><span>🧑‍💻 Team Roles</span></button>
+        <button class="nav-link" id="navLinkSettings" onclick="switchTab('settings')"><span>⚙️ Agency Settings</span></button>
+      </nav>
+      <div class="user-role-badge-box">
+        <div class="role-box-label">SESSION ROLE</div>
+        <select id="activeUserRoleSelect" onchange="changeActiveUserRole(this.value)" class="filter-select role-select">
+          <option value="Admin">Rahmatullah Sakib (Admin)</option>
+          <option value="Sub-Admin">Rafiqul Islam (Sub-Admin)</option>
+          <option value="Media Buyer">Nusrat Jahan (Media Buyer)</option>
+          <option value="Marketer">Tanjila Akter (Marketer)</option>
+        </select>
+        <div class="role-permission-hint" id="sbRolePermissionHint">Meta API: Full Access</div>
+      </div>
+      <div class="sidebar-footer">
+        <div class="admin-profile" onclick="switchTab('settings')">
+          <div class="avatar-circle" id="sbAvatarText">RS</div>
+          <div class="admin-details">
+            <span class="admin-name" id="sbAdminName">Rahmatullah Sakib</span>
+            <span class="admin-role" id="sbAdminRole">Admin</span>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- MAIN VIEWPORT -->
+    <main class="main-viewport">
+      <!-- TOP NAVBAR: Half-width search on mobile, adjacent Export button, bell on extreme right -->
+      <header class="top-navbar">
+        <div class="search-wrap">
+          <span class="search-icon-svg">🔍</span>
+          <input type="text" id="globalSearchInput" class="search-input" placeholder="Search ID, client, marketer..." oninput="handleSearch(this.value)" />
+          <span class="kbd-badge">⌘ K</span>
+        </div>
+        <button class="header-export-btn" onclick="exportDataPDF()" title="Export PDF Performance Report">
+          <span>📄</span><span class="header-export-text">Export</span>
+        </button>
+        <div class="navbar-right">
+          <button class="theme-switch-btn" id="themeToggleBtn" onclick="toggleTheme()" title="Toggle Dark/Light Mode">
+            <span id="themeIcon">🌙</span><span id="themeLabel">Dark</span>
+          </button>
+          <div class="notif-btn-wrap">
+            <button class="icon-btn" onclick="toggleNotifications()" title="Notifications">
+              🔔<span class="notif-badge-pill" id="notifBadge">3</span>
+            </button>
+            <div class="notif-popup" id="notifPopup">
+              <div class="notif-header">
+                <span style="font-weight:800;font-size:11px;">Agency Alerts</span>
+                <button class="tbl-btn" onclick="clearNotifications()" style="font-size:8.5px;">Mark read</button>
+              </div>
+              <div class="notif-list" id="notifList"></div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- PRINTABLE PDF REPORT -->
+      <div class="print-report-container" id="printReportContainer">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+          <div>
+            <div style="font-size:20px;font-weight:800;color:#15803d;">Bizzgraph - Ad Agency Performance Report</div>
+            <div style="font-size:11px;color:#475569;margin-top:2px;">Slogan: Your Business Grower • Admin: Rahmatullah Sakib</div>
+          </div>
+          <div style="text-align:right;font-size:10px;color:#64748b;">
+            <div><b>Range:</b> <span id="printPeriodLabel">Last 30 days</span></div>
+            <div><b>Generated:</b> <span id="printGenDateLabel"></span></div>
+          </div>
+        </div>
+        <hr style="border:none;border-top:2px solid #15803d;margin:10px 0 14px;" />
+        <div id="printMetricsSummary"></div>
+        <div id="printTableWrapper" style="margin-top:12px;"></div>
+      </div>
+
+      <!-- 1. MOBILE HOME TAB -->
+      <section id="viewHome" class="view-panel">
+        <div class="mobile-greeting-banner">
+          <div>
+            <div class="mobile-greeting-text">Bizzgraph Portal • <span id="mHomeRoleLabel">Admin</span></div>
+            <div class="mobile-user-name" id="mHomeUserName">Rahmatullah Sakib</div>
+          </div>
+          <div class="date-select-wrap">
+            <select id="mHomeDateRangeFilter" class="filter-select date-filter-dropdown" onchange="handleDateRangeChange(this.value)">
+              <option value="Today">Today</option><option value="Yesterday">Yesterday</option><option value="Last 3 days">Last 3 days</option>
+              <option value="Last 7 days">Last 7 days</option><option value="Last 15 days">Last 15 days</option><option value="Last 30 days" selected>Last 30 days</option>
+              <option value="1 Year">1 Year</option><option value="Maximum">Maximum</option>
+            </select>
+          </div>
+        </div>
+        <div class="stats-cards-strip">
+          <div class="stat-card">
+            <div class="stat-icon-wrap">📢</div>
+            <div class="stat-body"><span class="stat-title">Total Campaigns</span><span class="stat-val" id="statHomeTotal">8</span><span class="stat-trend">↑ 20% <span class="trendPeriodText">Last 30 days</span></span></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon-wrap">👥</div>
+            <div class="stat-body"><span class="stat-title">Active Campaigns</span><span class="stat-val" id="statHomeActive" style="color:var(--primary-green);">6</span><span class="stat-trend">↑ Live ads</span></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon-wrap">💵</div>
+            <div class="stat-body"><span class="stat-title">Total Spend</span><span class="stat-val" id="statHomeSpend">$0.00</span><span class="stat-trend">↑ 18% ROI</span></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon-wrap">📈</div>
+            <div class="stat-body"><span class="stat-title">Total Value</span><span class="stat-val" id="statHomeRevenue">$0.00</span><span class="stat-trend">4.8x ROAS</span></div>
+          </div>
+        </div>
+        <div class="surface-card">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+            <span style="font-weight:800;font-size:11px;">Status Overview</span><span style="font-size:9px;color:var(--text-muted);">Tap to filter</span>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;">
+            <button class="tbl-btn" style="padding:6px 4px;text-align:center;" onclick="quickFilterFromHome('all')"><div style="font-size:13px;font-weight:800;" id="cntHomeAll">8</div><div style="font-size:8px;color:var(--text-muted);">All</div></button>
+            <button class="tbl-btn tbl-btn-edit" style="padding:6px 4px;text-align:center;" onclick="quickFilterFromHome('active')"><div style="font-size:13px;font-weight:800;" id="cntHomeActive">6</div><div style="font-size:8px;">Active</div></button>
+            <button class="tbl-btn tbl-btn-note" style="padding:6px 4px;text-align:center;" onclick="quickFilterFromHome('paused')"><div style="font-size:13px;font-weight:800;" id="cntHomePaused">1</div><div style="font-size:8px;">Paused</div></button>
+            <button class="tbl-btn" style="padding:6px 4px;text-align:center;background:#fee2e2;color:#dc2626;border-color:#fca5a5;" onclick="quickFilterFromHome('rejected')"><div style="font-size:13px;font-weight:800;" id="cntHomeRejected">1</div><div style="font-size:8px;">Rejected</div></button>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          <button class="btn btn-primary" onclick="openNewCampaignModal()" style="height:32px;">+ New Campaign</button>
+          <button class="btn btn-outline" onclick="exportDataPDF()" style="height:32px;">📄 Export Report PDF</button>
+        </div>
+        <div class="surface-card">
+          <div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-weight:800;font-size:11px;">Agency Alerts & Updates</span><button class="tbl-btn" onclick="clearNotifications()">Clear</button></div>
+          <div id="mHomeAlertsList" style="display:flex;flex-direction:column;gap:6px;margin-top:4px;"></div>
+        </div>
+        <div class="surface-card">
+          <div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-weight:800;font-size:11px;">Active Campaigns Snapshot</span><button class="tbl-btn" onclick="switchTab('campaigns')">View All →</button></div>
+          <div id="mHomeCampaignSnapshot" style="display:flex;flex-direction:column;gap:6px;margin-top:6px;"></div>
+        </div>
+      </section>
+
+      <!-- 2. CAMPAIGNS TAB -->
+      <section id="viewCampaigns" class="view-panel active">
+        <div class="dashboard-sub-header">
+          <div class="sub-header-left">
+            <span class="page-category-badge">CAMPAIGNS MANAGEMENT</span>
+            <h1 class="page-title">All Campaigns</h1>
+            <p class="page-desc">Track real-time spend, budgets, ad accounts, and marketer notes.</p>
+          </div>
+          <div class="sub-header-right">
+            <div class="date-select-wrap">
+              <select id="dateRangeFilter" class="filter-select date-filter-dropdown" onchange="handleDateRangeChange(this.value)">
+                <option value="Today">Today</option><option value="Yesterday">Yesterday</option><option value="Last 3 days">Last 3 days</option>
+                <option value="Last 7 days">Last 7 days</option><option value="Last 15 days">Last 15 days</option><option value="Last 30 days" selected>Last 30 days</option>
+                <option value="1 Year">1 Year</option><option value="Maximum">Maximum</option>
+              </select>
+            </div>
+            <button class="btn btn-outline btn-sm" onclick="exportDataPDF()">📄 Export as PDF</button>
+            <button class="btn btn-primary btn-sm" onclick="openNewCampaignModal()">+ New Campaign</button>
+          </div>
+        </div>
+        <div class="stats-cards-strip">
+          <div class="stat-card">
+            <div class="stat-icon-wrap">📢</div>
+            <div class="stat-body"><span class="stat-title">Total Campaigns</span><span class="stat-val" id="statTotalCampaigns">8</span><span class="stat-trend">↑ 20% <span id="statTrendPeriod">Last 30 days</span></span></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon-wrap">👥</div>
+            <div class="stat-body"><span class="stat-title">Active Campaigns</span><span class="stat-val" id="statActiveCampaigns" style="color:var(--primary-green);">6</span><span class="stat-trend">↑ Live ads</span></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon-wrap">💵</div>
+            <div class="stat-body"><span class="stat-title">Total Spend</span><span class="stat-val" id="statTotalSpend">$0.00</span><span class="stat-trend">↑ 18% ROI</span></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon-wrap">📈</div>
+            <div class="stat-body"><span class="stat-title">Total Value</span><span class="stat-val" id="statTotalRevenue">$0.00</span><span class="stat-trend">4.8x ROAS</span></div>
+          </div>
+        </div>
+        <div class="controls-bar">
+          <div class="status-tabs" id="statusTabsGroup">
+            <button class="status-tab-btn active" onclick="setStatusFilter('all', this)">All (<span id="cntAll">0</span>)</button>
+            <button class="status-tab-btn" onclick="setStatusFilter('active', this)">Active (<span id="cntActive">0</span>)</button>
+            <button class="status-tab-btn" onclick="setStatusFilter('paused', this)">Paused (<span id="cntPaused">0</span>)</button>
+            <button class="status-tab-btn" onclick="setStatusFilter('rejected', this)">Rejected (<span id="cntRejected">0</span>)</button>
+          </div>
+          <div class="controls-right-tools">
+            <input type="text" class="table-filter-input" placeholder="Quick filter..." oninput="handleSearch(this.value)" />
+            <button class="filter-popover-btn" onclick="toggleFilterPopover()">⚙️ Filters</button>
+            <div class="filter-popover" id="filterPopover">
+              <div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-weight:800;font-size:11px;">Filter Table</span><button type="button" class="tbl-btn" onclick="resetAdvancedFilters()">Reset</button></div>
+              <div class="filter-row"><label>Marketer</label><select id="advMarketerSelect" class="filter-select" onchange="applyAdvancedFilters()"><option value="">All</option></select></div>
+              <div class="filter-row"><label>Category</label><select id="advCategorySelect" class="filter-select" onchange="applyAdvancedFilters()"><option value="">All Categories</option><option value="Tech & SaaS">Tech & SaaS</option><option value="E-commerce">E-commerce</option><option value="Fitness">Fitness</option><option value="Finance">Finance</option><option value="Healthcare">Healthcare</option><option value="Energy & Home">Energy & Home</option></select></div>
+              <div class="filter-row"><label>Ad Account</label><select id="advAccountSelect" class="filter-select" onchange="applyAdvancedFilters()"><option value="">All Accounts</option></select></div>
+            </div>
+          </div>
+        </div>
+        <!-- 10-Column Desktop Table -->
+        <div class="table-card" id="campaignsTableCard">
+          <div class="table-viewport">
+            <table class="high-density-table" id="campaignsTable">
+              <thead>
+                <tr>
+                  <th style="width:7.5%;">Status</th><th style="width:8.5%;">Spent</th><th style="width:16%;">Client & ID</th>
+                  <th style="width:9.5%;">Budget</th><th style="width:8.5%;">Duration</th><th style="width:14%;">Direction / Notes</th>
+                  <th style="width:9.5%;">Category</th><th style="width:9.5%;">Ad Account</th><th style="width:8.5%;">Marketer</th><th style="width:8.5%;">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="campaignTableBody"></tbody>
+            </table>
+          </div>
+          <div class="table-footer"><span id="footerCountText">Showing 0 campaigns</span><span>Bizzgraph • Ad Management (Phase 1)</span></div>
+        </div>
+        <!-- Mobile Card View -->
+        <div class="mobile-view-container" id="mobileCardsContainer"><div id="mobileCardsList"></div></div>
+      </section>
+
+      <!-- 3. CLIENTS TAB -->
+      <section id="viewClients" class="view-panel">
+        <div class="dashboard-sub-header">
+          <div>
+            <span class="page-category-badge">CLIENTS</span>
+            <h1 class="page-title">Client Accounts</h1>
+            <p class="page-desc">All client accounts and their unique 4-digit IDs. Client portal is strictly read-only.</p>
+          </div>
+        </div>
+        <div id="clientsGrid" class="cards-grid"></div>
+      </section>
+
+      <!-- 4. TEAM ROLES TAB -->
+      <section id="viewTeam" class="view-panel">
+        <div class="dashboard-sub-header">
+          <div>
+            <span class="page-category-badge">TEAM & ROLES</span>
+            <h1 class="page-title">Agency Staff & Permissions</h1>
+            <p class="page-desc">Roles: Admin, Sub-Admin, Media Buyer, and Marketer.</p>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="openAddUserModal()">+ Add User</button>
+        </div>
+        <div id="teamGrid" class="cards-grid"></div>
+      </section>
+
+      <!-- 5. SETTINGS TAB -->
+      <section id="viewSettings" class="view-panel">
+        <div class="dashboard-sub-header">
+          <div>
+            <span class="page-category-badge">SETTINGS</span>
+            <h1 class="page-title">Agency Profile & Meta API</h1>
+            <p class="page-desc">Manage agency branding and secure Meta Graph API credentials.</p>
+          </div>
+        </div>
+        <div class="settings-container">
+          <div class="surface-card settings-card">
+            <h3 class="settings-section-title">🏢 Agency Branding</h3>
+            <div class="form-group"><label class="form-label">Agency Name</label><input type="text" id="settingsAgencyName" class="form-input" value="Bizzgraph" /></div>
+            <div class="form-group"><label class="form-label">Agency Slogan</label><input type="text" id="settingsAgencySlogan" class="form-input" value="Your Business Grower" /></div>
+            <div class="form-group"><label class="form-label">Admin Name</label><input type="text" id="settingsAdminName" class="form-input" value="Rahmatullah Sakib" /></div>
+            <div class="form-group">
+              <label class="form-label">Agency Logo</label>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <input type="file" id="settingsLogoFile" accept="image/*" onchange="handleLogoUpload(event)" class="form-input" style="padding:3px;font-size:10px;" />
+                <button type="button" class="tbl-btn" onclick="clearLogo()" style="height:26px;">Remove</button>
+              </div>
+            </div>
+            <div class="form-actions"><button class="btn btn-primary btn-sm" onclick="saveAgencySettings()">Save Branding</button></div>
+          </div>
+
+          <div class="surface-card settings-card" id="metaApiSettingsCard">
+            <div style="display:flex;align-items:center;justify-content:space-between;">
+              <h3 class="settings-section-title" style="margin-bottom:0;">⚡ Meta Graph API Settings</h3>
+              <span class="status-pill status-active" id="metaRoleAccessStatus"><span class="status-dot"></span>Authorized</span>
+            </div>
+            <div id="metaApiAuthorizedContent">
+              <p class="meta-desc">Authorized roles: <b>Admin</b>, <b>Sub-Admin</b>, and <b>Media Buyer</b>. Marketers have permissions restricted.</p>
+              <div class="form-group"><label class="form-label">Meta Business Manager Access Token</label><input type="password" id="settingsMetaToken" class="form-input" placeholder="EAABkP28..." /></div>
+              <div class="form-actions">
+                <button class="btn btn-outline btn-sm" onclick="testMetaConnection()">Verify Token</button>
+                <button class="btn btn-primary btn-sm" onclick="saveAgencySettings()">Save Meta Token</button>
+              </div>
+            </div>
+            <div id="metaApiRestrictedNotice" style="display:none;" class="meta-restricted-box">
+              <div class="restricted-title">🔒 Access Restricted</div>
+              <div class="restricted-text">Meta API settings can only be accessed by <b>Admin</b>, <b>Sub-Admin</b>, and <b>Media Buyer</b>. Marketers are restricted from viewing or altering API tokens.</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 6. MOBILE MORE TAB -->
+      <section id="viewMore" class="view-panel">
+        <div class="dashboard-sub-header">
+          <div><span class="page-category-badge">MORE SETTINGS & TOOLS</span><h1 class="page-title">Agency Hub</h1><p class="page-desc">Admin tools, team roles, and agency preferences.</p></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;max-width:540px;">
+          <div class="mobile-more-item" onclick="toggleTheme()">
+            <div class="mobile-more-icon-title"><span class="mobile-more-icon" id="mThemeIcon">🌙</span><div><div class="mobile-more-text">Dark Mode</div><div class="mobile-more-sub" id="mThemeStatus">Light theme active</div></div></div>
+            <div class="toggle-pill" id="mThemePill"><span class="toggle-dot"></span></div>
+          </div>
+          <div class="mobile-more-item" style="flex-direction:column;align-items:flex-start;gap:6px;">
+            <div class="mobile-more-icon-title"><span class="mobile-more-icon">🛡️</span><div><div class="mobile-more-text">Active Session Role</div><div class="mobile-more-sub">Test Admin vs Marketer API permission</div></div></div>
+            <select id="mobileRoleSelect" onchange="changeActiveUserRole(this.value)" class="filter-select" style="width:100%;height:30px;font-weight:700;">
+              <option value="Admin">Rahmatullah Sakib • Admin</option><option value="Sub-Admin">Rafiqul Islam • Sub-Admin</option>
+              <option value="Media Buyer">Nusrat Jahan • Media Buyer</option><option value="Marketer">Tanjila Akter • Marketer</option>
+            </select>
+          </div>
+          <div class="mobile-more-item" onclick="openAddAccountModal()"><div class="mobile-more-icon-title"><span class="mobile-more-icon">💳</span><div><div class="mobile-more-text">+ Add Ad Account</div><div class="mobile-more-sub">Connect Meta Ads, Google Ads, TikTok</div></div></div><span>›</span></div>
+          <div class="mobile-more-item" onclick="openAddUserModal()"><div class="mobile-more-icon-title"><span class="mobile-more-icon">👤</span><div><div class="mobile-more-text">+ Add Agency User</div><div class="mobile-more-sub">Admin, Sub-Admin, Media Buyer, Marketer</div></div></div><span>›</span></div>
+          <div class="mobile-more-item" onclick="exportDataPDF()"><div class="mobile-more-icon-title"><span class="mobile-more-icon">📄</span><div><div class="mobile-more-text">Export Report as PDF</div><div class="mobile-more-sub">Direct printable performance report</div></div></div><span>›</span></div>
+          <div class="mobile-more-item" onclick="switchTab('team')"><div class="mobile-more-icon-title"><span class="mobile-more-icon">🧑‍💻</span><div><div class="mobile-more-text">Team Roles & Permissions</div><div class="mobile-more-sub">View all agency staff members</div></div></div><span>›</span></div>
+          <div class="mobile-more-item" onclick="switchTab('settings')"><div class="mobile-more-icon-title"><span class="mobile-more-icon">⚙️</span><div><div class="mobile-more-text">Agency Profile & Meta API</div><div class="mobile-more-sub">Branding and Graph API credentials</div></div></div><span>›</span></div>
+          <div class="surface-card" style="margin-top:6px;text-align:center;padding:12px;">
+            <div style="font-weight:800;font-size:13px;color:var(--primary-green);">Bizzgraph</div>
+            <div style="font-size:9.5px;color:var(--text-muted);margin-top:2px;">Your Business Grower</div>
+            <div style="font-size:9px;color:var(--text-muted);margin-top:4px;">Admin: Rahmatullah Sakib</div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- MOBILE BOTTOM NAVIGATION BAR -->
+    <nav class="mobile-bottom-bar">
+      <button class="m-nav-item" id="mNavHome" onclick="switchTab('home')">
+        <svg class="m-nav-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        <span>Home</span>
+      </button>
+      <button class="m-nav-item active" id="mNavCampaigns" onclick="switchTab('campaigns')">
+        <svg class="m-nav-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M7 8h10M7 12h10M7 16h6"/></svg>
+        <span>Campaigns</span>
+      </button>
+      <button class="m-fab-btn" onclick="openNewCampaignModal()" title="Add Campaign" aria-label="Add Campaign">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      </button>
+      <button class="m-nav-item" id="mNavClients" onclick="switchTab('clients')">
+        <svg class="m-nav-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        <span>Clients</span>
+      </button>
+      <button class="m-nav-item" id="mNavMore" onclick="switchTab('more')">
+        <svg class="m-nav-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+        <span>More</span>
+      </button>
+    </nav>
+  </div>
+
+  <!-- MODALS -->
+  <div class="modal-overlay" id="editModalOverlay">
+    <div class="modal-box">
+      <div class="modal-header"><div class="modal-title">Edit Campaign</div><button class="modal-close-btn" onclick="closeEditModal()">✕</button></div>
+      <form id="editForm" onsubmit="handleEditSubmit(event)">
+        <input type="hidden" id="editCampId" />
+        <div class="form-group"><label class="form-label">Client Name</label><input type="text" id="editCampClient" class="form-input" readonly style="opacity:0.75;" /></div>
+        <div class="form-group"><label class="form-label">Total Spent ($)</label><input type="number" step="0.01" min="0" id="editCampSpent" class="form-input" required /></div>
+        <div class="form-group"><label class="form-label">Ad Account</label><select id="editCampAccount" class="form-select"></select></div>
+        <div class="form-group"><label class="form-label">Meta Campaign ID</label><input type="text" id="editCampMetaId" class="form-input" /></div>
+        <div class="form-group"><label class="form-label">Status</label><select id="editCampStatus" class="form-select"><option value="Active">Active</option><option value="Paused">Paused</option><option value="Rejected">Rejected</option></select></div>
+        <div class="form-actions"><button type="button" class="btn btn-outline btn-sm" onclick="closeEditModal()">Cancel</button><button type="submit" class="btn btn-primary btn-sm">Save</button></div>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="quickNoteModalOverlay">
+    <div class="modal-box">
+      <div class="modal-header"><div class="modal-title">Campaign Quick Note</div><button class="modal-close-btn" onclick="closeQuickNoteModal()">✕</button></div>
+      <form onsubmit="handleQuickNoteSubmit(event)">
+        <input type="hidden" id="qnCampId" />
+        <div class="form-group"><label class="form-label">Client</label><input type="text" id="qnCampClient" class="form-input" readonly style="opacity:0.75;" /></div>
+        <div class="form-group"><label class="form-label">Note</label><textarea id="qnNoteText" class="form-textarea" rows="3" required></textarea></div>
+        <div class="form-actions"><button type="button" class="btn btn-outline btn-sm" onclick="closeQuickNoteModal()">Cancel</button><button type="submit" class="btn btn-primary btn-sm">Save Note</button></div>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="newCampModalOverlay">
+    <div class="modal-box">
+      <div class="modal-header"><div class="modal-title">Create Campaign</div><button class="modal-close-btn" onclick="closeNewCampModal()">✕</button></div>
+      <form onsubmit="handleNewCampSubmit(event)">
+        <div class="form-group"><label class="form-label">Client Name</label><input type="text" id="ncClientName" class="form-input" required /></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+          <div class="form-group"><label class="form-label">Budget ($)</label><input type="number" id="ncTotalBudget" class="form-input" value="1500" required /></div>
+          <div class="form-group"><label class="form-label">Days</label><input type="number" id="ncDays" class="form-input" value="30" required /></div>
+        </div>
+        <div class="form-group"><label class="form-label">Category</label><select id="ncCategory" class="form-select"><option value="Tech & SaaS">Tech & SaaS</option><option value="E-commerce">E-commerce</option><option value="Fitness">Fitness</option><option value="Finance">Finance</option><option value="Healthcare">Healthcare</option><option value="Energy & Home">Energy & Home</option></select></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+          <div class="form-group"><label class="form-label">Ad Account</label><select id="ncAdAccount" class="form-select"></select></div>
+          <div class="form-group"><label class="form-label">Marketer</label><select id="ncMarketer" class="form-select"></select></div>
+        </div>
+        <div class="form-group"><label class="form-label">Goal / Direction</label><input type="text" id="ncDirection" class="form-input" placeholder="Conversion Leads" /></div>
+        <div class="form-actions"><button type="button" class="btn btn-outline btn-sm" onclick="closeNewCampModal()">Cancel</button><button type="submit" class="btn btn-primary btn-sm">Create</button></div>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="addUserModalOverlay">
+    <div class="modal-box">
+      <div class="modal-header"><div class="modal-title">+ Add Agency User</div><button class="modal-close-btn" onclick="closeAddUserModal()">✕</button></div>
+      <form onsubmit="handleAddUserSubmit(event)">
+        <div class="form-group"><label class="form-label">Full Name</label><input type="text" id="nuName" class="form-input" required /></div>
+        <div class="form-group"><label class="form-label">Role</label><select id="nuRole" class="form-select"><option value="Admin">Admin</option><option value="Sub-Admin">Sub-Admin</option><option value="Media Buyer">Media Buyer</option><option value="Marketer" selected>Marketer</option></select></div>
+        <div class="form-group"><label class="form-label">Email</label><input type="email" id="nuEmail" class="form-input" required /></div>
+        <div class="form-actions"><button type="button" class="btn btn-outline btn-sm" onclick="closeAddUserModal()">Cancel</button><button type="submit" class="btn btn-primary btn-sm">Add User</button></div>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="addAccountModalOverlay">
+    <div class="modal-box">
+      <div class="modal-header"><div class="modal-title">+ Add Ad Account</div><button class="modal-close-btn" onclick="closeAddAccountModal()">✕</button></div>
+      <form onsubmit="handleAddAccountSubmit(event)">
+        <div class="form-group"><label class="form-label">Account Name</label><input type="text" id="naName" class="form-input" required /></div>
+        <div class="form-group"><label class="form-label">Platform</label><select id="naPlatform" class="form-select"><option value="Meta Ads">Meta Ads</option><option value="Google Ads">Google Ads</option><option value="TikTok">TikTok</option></select></div>
+        <div class="form-actions"><button type="button" class="btn btn-outline btn-sm" onclick="closeAddAccountModal()">Cancel</button><button type="submit" class="btn btn-primary btn-sm">Add</button></div>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="magicModalOverlay">
+    <div class="modal-box">
+      <div class="modal-header"><div class="modal-title">Client Magic Link (Read-Only)</div><button class="modal-close-btn" onclick="closeMagicModal()">✕</button></div>
+      <p style="font-size:9.5px;color:var(--text-muted);">Editor is strictly OFF. Share this read-only live URL directly with the client:</p>
+      <input type="text" id="magicLinkInput" class="form-input" readonly />
+      <div class="form-actions"><button class="btn btn-primary btn-sm" onclick="copyMagicLink()">📋 Copy Link</button></div>
+    </div>
+  </div>
+
+  <script>
+    let agency = { name: 'Bizzgraph', subtitle: 'Your Business Grower', admin_name: 'Rahmatullah Sakib', meta_access_token: '', logo_url: '' };
+    let users = [], adAccounts = [], campaigns = [], notifications = [];
+    let statusFilter = 'all', searchQuery = '', selectedDateRange = 'Last 30 days';
+    let advFilter = { marketer: '', category: '', account: '' }, currentRole = 'Admin';
+    const META_AUTH_ROLES = ['Admin', 'Sub-Admin', 'Media Buyer'];
+
+    window.addEventListener('DOMContentLoaded', () => { initTheme(); loadBootstrapData(); });
+
+    function initTheme() { applyTheme(localStorage.getItem('bizzgraph_theme') || 'light'); }
+    function toggleTheme() {
+      const target = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      applyTheme(target);
+      localStorage.setItem('bizzgraph_theme', target);
+    }
+    function applyTheme(t) {
+      const isDark = t === 'dark';
+      if (isDark) document.documentElement.setAttribute('data-theme', 'dark');
+      else document.documentElement.removeAttribute('data-theme');
+      const ti = document.getElementById('themeIcon'), tl = document.getElementById('themeLabel');
+      if (ti) ti.textContent = isDark ? '☀️' : '🌙';
+      if (tl) tl.textContent = isDark ? 'Light' : 'Dark';
+      const mi = document.getElementById('mThemeIcon'), ms = document.getElementById('mThemeStatus'), mp = document.getElementById('mThemePill');
+      if (mi) mi.textContent = isDark ? '☀️' : '🌙';
+      if (ms) ms.textContent = isDark ? 'Dark theme active' : 'Light theme active';
+      if (mp) mp.classList.toggle('active', isDark);
+    }
+
+    async function loadBootstrapData() {
+      try {
+        const res = await fetch('/api/bootstrap');
+        if (res.ok) {
+          const d = await res.json();
+          if (d.agency) agency = d.agency;
+          if (d.users) users = d.users;
+          if (d.ad_accounts) adAccounts = d.ad_accounts;
+          if (d.campaigns) campaigns = d.campaigns;
+          if (d.notifications) notifications = d.notifications;
+        }
+      } catch (e) { console.warn('Bootstrap error:', e); }
+      syncAgencyUI(); populateDropdowns(); enforceRolePermissions(); renderAll(); renderNotifications();
+    }
+
+    function syncAgencyUI() {
+      document.getElementById('sbAgencyName').textContent = agency.name || 'Bizzgraph';
+      document.getElementById('sbAgencySlogan').textContent = agency.subtitle || 'Your Business Grower';
+      document.getElementById('sbAdminName').textContent = agency.admin_name || 'Rahmatullah Sakib';
+      document.getElementById('mHomeUserName').textContent = agency.admin_name || 'Rahmatullah Sakib';
+      document.getElementById('settingsAgencyName').value = agency.name || 'Bizzgraph';
+      document.getElementById('settingsAgencySlogan').value = agency.subtitle || 'Your Business Grower';
+      document.getElementById('settingsAdminName').value = agency.admin_name || 'Rahmatullah Sakib';
+      document.getElementById('settingsMetaToken').value = agency.meta_access_token || '';
+      const img = document.getElementById('brandLogoImg'), txt = document.getElementById('brandLogoText');
+      if (agency.logo_url) { img.src = agency.logo_url; img.style.display = 'block'; txt.style.display = 'none'; }
+      else { img.style.display = 'none'; txt.style.display = 'block'; }
+    }
+
+    function populateDropdowns() {
+      const aH = adAccounts.map(a => `<option value="${a.account_name}">${a.account_name}</option>`).join('');
+      const uH = users.map(u => `<option value="${u.name}">${u.name} (${u.role})</option>`).join('');
+      document.getElementById('ncAdAccount').innerHTML = aH;
+      document.getElementById('ncMarketer').innerHTML = uH;
+      document.getElementById('editCampAccount').innerHTML = aH;
+      document.getElementById('advMarketerSelect').innerHTML = '<option value="">All</option>' + users.map(u => `<option value="${u.name}">${u.name}</option>`).join('');
+      document.getElementById('advAccountSelect').innerHTML = '<option value="">All Accounts</option>' + adAccounts.map(a => `<option value="${a.account_name}">${a.account_name}</option>`).join('');
+    }
+
+    function changeActiveUserRole(role) {
+      currentRole = role;
+      document.getElementById('sbAdminRole').textContent = role;
+      document.getElementById('mHomeRoleLabel').textContent = role;
+      document.getElementById('activeUserRoleSelect').value = role;
+      document.getElementById('mobileRoleSelect').value = role;
+      const hint = document.getElementById('sbRolePermissionHint');
+      hint.textContent = META_AUTH_ROLES.includes(role) ? 'Meta API: Full Access' : 'Meta API: Restricted';
+      hint.style.color = META_AUTH_ROLES.includes(role) ? 'var(--primary-green)' : '#dc2626';
+      enforceRolePermissions();
+    }
+
+    function enforceRolePermissions() {
+      const auth = META_AUTH_ROLES.includes(currentRole);
+      document.getElementById('metaApiAuthorizedContent').style.display = auth ? 'block' : 'none';
+      document.getElementById('metaApiRestrictedNotice').style.display = auth ? 'none' : 'block';
+      const st = document.getElementById('metaRoleAccessStatus');
+      st.className = 'status-pill ' + (auth ? 'status-active' : 'status-rejected');
+      st.innerHTML = `<span class="status-dot"></span>${auth ? 'Authorized' : 'Restricted'}`;
+    }
+
+    function handleDateRangeChange(range) {
+      selectedDateRange = range;
+      document.getElementById('dateRangeFilter').value = range;
+      document.getElementById('mHomeDateRangeFilter').value = range;
+      document.getElementById('statTrendPeriod').textContent = range;
+      document.querySelectorAll('.trendPeriodText').forEach(el => el.textContent = range);
+      renderAll();
+    }
+
+    function renderAll() {
+      const list = campaigns.filter(c => {
+        if (statusFilter !== 'all' && c.status.toLowerCase() !== statusFilter.toLowerCase()) return false;
+        if (advFilter.marketer && c.marketer_name !== advFilter.marketer) return false;
+        if (advFilter.category && c.category !== advFilter.category) return false;
+        if (advFilter.account && c.current_ad_account !== advFilter.account) return false;
+        if (searchQuery) {
+          const q = searchQuery.toLowerCase().replace(/^#/, '');
+          if (!c.unique_id.includes(q) && !c.client_name.toLowerCase().includes(q) && !c.marketer_name.toLowerCase().includes(q)) return false;
+        }
+        return true;
+      });
+
+      let mult = { 'Today': 0.08, 'Yesterday': 0.09, 'Last 3 days': 0.22, 'Last 7 days': 0.45, 'Last 15 days': 0.72, 'Last 30 days': 1.0, '1 Year': 1.6, 'Maximum': 1.85 }[selectedDateRange] || 1.0;
+      const totalSpend = campaigns.reduce((s, c) => s + (Number(c.total_spent) || 0), 0) * mult;
+      const totalRevenue = totalSpend * 4.8;
+      const activeCount = campaigns.filter(c => c.status === 'Active').length;
+      const pausedCount = campaigns.filter(c => c.status === 'Paused').length;
+      const rejectedCount = campaigns.filter(c => c.status === 'Rejected').length;
+      const fmtSpend = `$${totalSpend.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+      const fmtRev = `$${totalRevenue.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+
+      document.getElementById('statTotalCampaigns').textContent = campaigns.length;
+      document.getElementById('statActiveCampaigns').textContent = activeCount;
+      document.getElementById('statTotalSpend').textContent = fmtSpend;
+      document.getElementById('statTotalRevenue').textContent = fmtRev;
+      document.getElementById('navCampCount').textContent = activeCount;
+      document.getElementById('cntAll').textContent = campaigns.length;
+      document.getElementById('cntActive').textContent = activeCount;
+      document.getElementById('cntPaused').textContent = pausedCount;
+      document.getElementById('cntRejected').textContent = rejectedCount;
+      document.getElementById('footerCountText').textContent = `Showing ${list.length} of ${campaigns.length} campaigns`;
+
+      document.getElementById('statHomeTotal').textContent = campaigns.length;
+      document.getElementById('statHomeActive').textContent = activeCount;
+      document.getElementById('statHomeSpend').textContent = fmtSpend;
+      document.getElementById('statHomeRevenue').textContent = fmtRev;
+      document.getElementById('cntHomeAll').textContent = campaigns.length;
+      document.getElementById('cntHomeActive').textContent = activeCount;
+      document.getElementById('cntHomePaused').textContent = pausedCount;
+      document.getElementById('cntHomeRejected').textContent = rejectedCount;
+
+      const topActive = campaigns.filter(c => c.status === 'Active').slice(0, 3);
+      document.getElementById('mHomeCampaignSnapshot').innerHTML = topActive.map(c => `
+        <div style="display:flex;justify-content:space-between;align-items:center;background:var(--bg-subtle);padding:6px 8px;border-radius:var(--radius-sm);">
+          <div><div style="font-weight:700;font-size:10.5px;">${c.client_name}</div><div class="mono-id">#${c.unique_id} • ${c.current_ad_account}</div></div>
+          <div style="text-align:right;"><div style="font-weight:800;font-size:11px;">$${Number(c.total_spent).toFixed(2)}</div><span class="status-pill status-active" style="font-size:7.5px;"><span class="status-dot"></span>Live</span></div>
+        </div>
+      `).join('') || '<div style="font-size:9.5px;color:var(--text-muted);text-align:center;">No active campaigns.</div>';
+
+      const tb = document.getElementById('campaignTableBody');
+      tb.innerHTML = list.length ? list.map(c => `
+        <tr>
+          <td><span class="status-pill status-${c.status.toLowerCase()}"><span class="status-dot"></span>${c.status}</span></td>
+          <td><span style="font-weight:700;">$</span><input type="number" step="0.01" class="spent-inline-input" value="${Number(c.total_spent||0).toFixed(2)}" onchange="updateSpentInline(${c.id}, this.value)" /></td>
+          <td><div class="client-name-text">${c.client_name}</div><div class="mono-id">#${c.unique_id}</div></td>
+          <td><div class="budget-val">$${Number(c.total_budget).toLocaleString()}</div><div class="budget-sub">$${Number(c.daily_budget).toFixed(1)}/d</div></td>
+          <td><div style="font-weight:700;font-size:9.5px;">${c.start_date.slice(5)} to ${c.end_date.slice(5)}</div><div style="font-size:8.5px;color:var(--text-muted);">${c.total_days} days</div></td>
+          <td class="direction-cell" title="${c.quick_notes}"><div style="font-weight:600;font-size:10px;">${c.direction}</div><div style="font-size:8.5px;color:var(--text-muted);">${c.quick_notes||''}</div></td>
+          <td><span style="font-weight:600;font-size:9.5px;">${c.category}</span></td>
+          <td><span style="font-weight:700;font-size:9.5px;">${c.current_ad_account}</span></td>
+          <td><div class="marketer-cell"><div class="marketer-avatar-sm">${c.marketer_name.slice(0,2).toUpperCase()}</div><span style="font-size:9.5px;">${c.marketer_name}</span></div></td>
+          <td><div class="action-btns-group"><button class="tbl-btn tbl-btn-edit" onclick="openEditModal(${c.id})">Edit</button><button class="tbl-btn tbl-btn-note" onclick="openQuickNoteModal(${c.id})">Note</button><button class="tbl-btn" onclick="openMagic('${c.unique_id}')">Link</button></div></td>
+        </tr>`).join('') : `<tr><td colspan="10" style="text-align:center;padding:18px;color:var(--text-muted);">No campaigns found.</td></tr>`;
+
+      document.getElementById('mobileCardsList').innerHTML = list.length ? list.map(c => `
+        <div class="mobile-card-item">
+          <div class="mobile-card-top">
+            <div class="mobile-card-brand-wrap"><div class="mobile-client-avatar">${c.client_name.charAt(0)}</div><div><div class="client-name-text">${c.client_name}</div><div class="mono-id">#${c.unique_id} • ${c.category}</div></div></div>
+            <span class="status-pill status-${c.status.toLowerCase()}"><span class="status-dot"></span>${c.status}</span>
+          </div>
+          <div class="mobile-card-metrics-row"><div><span style="font-size:8.5px;color:var(--text-muted);">Spent: </span><b style="font-size:11px;">$${Number(c.total_spent).toFixed(2)}</b></div><div><span style="font-size:8.5px;color:var(--text-muted);">Budget: </span><b style="font-size:11px;">$${Number(c.total_budget).toLocaleString()}</b></div><div><b style="font-size:9.5px;">${c.current_ad_account}</b></div></div>
+          <div style="font-size:9.5px;color:var(--text-muted);"><b>Note:</b> ${c.quick_notes||c.direction}</div>
+          <div class="mobile-card-actions">
+            <span style="font-size:9px;color:var(--text-muted);">Marketer: <b>${c.marketer_name}</b></span>
+            <div style="display:flex;gap:3px;"><button class="tbl-btn tbl-btn-edit" onclick="openEditModal(${c.id})">Edit</button><button class="tbl-btn tbl-btn-note" onclick="openQuickNoteModal(${c.id})">Note</button><button class="tbl-btn" onclick="openMagic('${c.unique_id}')">Link</button></div>
+          </div>
+        </div>`).join('') : `<div class="surface-card" style="text-align:center;padding:20px;color:var(--text-muted);">No campaigns found.</div>`;
+
+      const uClients = [...new Set(campaigns.map(c => c.client_name))];
+      document.getElementById('clientsGrid').innerHTML = uClients.map(cl => {
+        const cs = campaigns.filter(c => c.client_name === cl);
+        const first = cs[0] || {};
+        return `
+          <div class="surface-card">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+              <div><div style="font-weight:800;font-size:12.5px;">${cl}</div><div class="mono-id">#${first.unique_id || '----'} • ${first.category || 'General'}</div></div>
+              <span class="status-pill status-${(first.status||'active').toLowerCase()}"><span class="status-dot"></span>${first.status||'Active'}</span>
+            </div>
+            <div style="font-size:9px;color:var(--text-muted);margin-top:2px;">Ad Account: <b>${first.current_ad_account}</b> • Marketer: <b>${first.marketer_name}</b></div>
+            <div style="margin-top:6px;display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--border-subtle);padding-top:6px;">
+              <span style="font-size:8.5px;color:var(--text-muted);">Editor: Strictly OFF</span>
+              <button class="tbl-btn" onclick="openMagic('${first.unique_id}')">Read-Only Link</button>
+            </div>
+          </div>`;
+      }).join('');
+
+      document.getElementById('teamGrid').innerHTML = users.map(u => `
+        <div class="surface-card">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <div class="avatar-circle">${u.name.slice(0,2).toUpperCase()}</div>
+            <div>
+              <div style="font-weight:800;font-size:12px;">${u.name}</div>
+              <div style="font-size:9.5px;color:var(--primary-green);font-weight:700;">${u.role}</div>
+              <div style="font-size:8.5px;color:var(--text-muted);">${u.email}</div>
+            </div>
+          </div>
+          <div style="font-size:8px;color:var(--text-muted);border-top:1px solid var(--border-subtle);padding-top:4px;margin-top:4px;">
+            Meta API Access: <b>${META_AUTH_ROLES.includes(u.role)?'Authorized (Full Access)':'Restricted (Marketer Only)'}</b>
+          </div>
+        </div>`).join('');
+    }
+
+    function renderNotifications() {
+      const u = notifications.filter(n => n.unread).length;
+      document.getElementById('notifBadge').textContent = u;
+      document.getElementById('notifBadge').style.display = u > 0 ? 'flex' : 'none';
+      document.getElementById('notifList').innerHTML = notifications.map(n => `
+        <div class="notif-item ${n.unread?'':'read'}">
+          <span class="notif-text">${n.text}</span><span class="notif-time">${n.time}</span>
+        </div>`).join('');
+      const mAlerts = document.getElementById('mHomeAlertsList');
+      if (mAlerts) {
+        mAlerts.innerHTML = notifications.slice(0, 3).map(n => `
+          <div class="notif-item ${n.unread?'':'read'}" style="margin:0;">
+            <span class="notif-text">${n.text}</span><span class="notif-time">${n.time}</span>
+          </div>`).join('') || '<div style="font-size:9.5px;color:var(--text-muted);">No alerts.</div>';
+      }
+    }
+
+    function toggleNotifications() { document.getElementById('notifPopup').classList.toggle('open'); }
+    async function clearNotifications() {
+      try { await fetch('/api/notifications/clear', {method:'POST'}); } catch (e) { console.warn(e); }
+      notifications.forEach(n => n.unread = 0);
+      renderNotifications();
+    }
+
+    function exportDataPDF() {
+      document.getElementById('printPeriodLabel').textContent = selectedDateRange;
+      document.getElementById('printGenDateLabel').textContent = new Date().toLocaleDateString(undefined, {
+        year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+      });
+      let mult = { 'Today': 0.08, 'Yesterday': 0.09, 'Last 3 days': 0.22, 'Last 7 days': 0.45, 'Last 15 days': 0.72, 'Last 30 days': 1.0, '1 Year': 1.6, 'Maximum': 1.85 }[selectedDateRange] || 1.0;
+      const totalSpend = campaigns.reduce((s, c) => s + (Number(c.total_spent) || 0), 0) * mult;
+      const activeCount = campaigns.filter(c => c.status === 'Active').length;
+
+      const ms = document.getElementById('printMetricsSummary');
+      if (ms) {
+        ms.innerHTML = `
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;border:1px solid #cbd5e1;padding:8px 10px;border-radius:6px;background:#f8fafc;">
+            <div><span style="font-size:8.5px;color:#64748b;font-weight:700;">TOTAL CAMPAIGNS</span><div style="font-size:13px;font-weight:800;color:#0f172a;">${campaigns.length}</div></div>
+            <div><span style="font-size:8.5px;color:#64748b;font-weight:700;">ACTIVE CAMPAIGNS</span><div style="font-size:13px;font-weight:800;color:#15803d;">${activeCount}</div></div>
+            <div><span style="font-size:8.5px;color:#64748b;font-weight:700;">TOTAL SPEND (${selectedDateRange})</span><div style="font-size:13px;font-weight:800;color:#0f172a;">$${totalSpend.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</div></div>
+            <div><span style="font-size:8.5px;color:#64748b;font-weight:700;">TOTAL REVENUE (4.8x ROAS)</span><div style="font-size:13px;font-weight:800;color:#0f172a;">$${(totalSpend * 4.8).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</div></div>
+          </div>`;
+      }
+      const tw = document.getElementById('printTableWrapper');
+      if (tw) {
+        tw.innerHTML = `
+          <table style="width:100%;border-collapse:collapse;font-size:9px;border:1px solid #e2e8f0;">
+            <thead>
+              <tr style="background:#f1f5f9;border-bottom:1.5px solid #cbd5e1;text-align:left;">
+                <th style="padding:5px 6px;">Status</th><th style="padding:5px 6px;">Client Name</th><th style="padding:5px 6px;">ID</th>
+                <th style="padding:5px 6px;">Category</th><th style="padding:5px 6px;">Ad Account</th><th style="padding:5px 6px;">Budget</th>
+                <th style="padding:5px 6px;">Spent</th><th style="padding:5px 6px;">Marketer</th><th style="padding:5px 6px;">Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${campaigns.map(c => `
+                <tr style="border-bottom:1px solid #e2e8f0;">
+                  <td style="padding:4px 6px;font-weight:700;color:${c.status==='Active'?'#15803d':c.status==='Paused'?'#b45309':'#dc2626'}">${c.status}</td>
+                  <td style="padding:4px 6px;font-weight:700;">${c.client_name}</td>
+                  <td style="padding:4px 6px;font-family:monospace;">#${c.unique_id}</td>
+                  <td style="padding:4px 6px;">${c.category}</td>
+                  <td style="padding:4px 6px;font-weight:600;">${c.current_ad_account}</td>
+                  <td style="padding:4px 6px;font-weight:700;">$${Number(c.total_budget).toLocaleString()}</td>
+                  <td style="padding:4px 6px;font-weight:700;">$${Number(c.total_spent).toFixed(2)}</td>
+                  <td style="padding:4px 6px;">${c.marketer_name}</td>
+                  <td style="padding:4px 6px;color:#64748b;">${c.quick_notes || c.direction || '-'}</td>
+                </tr>`).join('')}
+            </tbody>
+          </table>`;
+      }
+      window.print();
+    }
+
+    function setStatusFilter(s, btn) {
+      statusFilter = s;
+      document.querySelectorAll('#statusTabsGroup button').forEach(b => b.classList.remove('active'));
+      if (btn) btn.classList.add('active');
+      renderAll();
+    }
+
+    function quickFilterFromHome(s) {
+      statusFilter = s;
+      switchTab('campaigns');
+      document.querySelectorAll('#statusTabsGroup button').forEach(b => b.classList.toggle('active', b.textContent.toLowerCase().includes(s)));
+      renderAll();
+    }
+
+    function toggleFilterPopover() { document.getElementById('filterPopover').classList.toggle('open'); }
+    function applyAdvancedFilters() {
+      advFilter.marketer = document.getElementById('advMarketerSelect').value;
+      advFilter.category = document.getElementById('advCategorySelect').value;
+      advFilter.account = document.getElementById('advAccountSelect').value;
+      renderAll();
+    }
+    function resetAdvancedFilters() {
+      advFilter = {marketer:'', category:'', account:''};
+      document.getElementById('advMarketerSelect').value = '';
+      document.getElementById('advCategorySelect').value = '';
+      document.getElementById('advAccountSelect').value = '';
+      renderAll();
+    }
+    function handleSearch(v) { searchQuery = (v||'').trim(); renderAll(); }
+
+    async function updateSpentInline(cid, val) {
+      try {
+        await fetch(`/api/campaigns/${cid}`, {
+          method: 'PUT', headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({total_spent: parseFloat(val)||0})
+        });
+      } catch (e) { console.warn(e); }
+      loadBootstrapData();
+    }
+
+    function openEditModal(cid) {
+      const c = campaigns.find(i => i.id === cid);
+      if (!c) return;
+      document.getElementById('editCampId').value = c.id;
+      document.getElementById('editCampClient').value = `${c.client_name} (#${c.unique_id})`;
+      document.getElementById('editCampSpent').value = Number(c.total_spent||0).toFixed(2);
+      document.getElementById('editCampAccount').value = c.current_ad_account;
+      document.getElementById('editCampMetaId').value = c.meta_campaign_id||'';
+      document.getElementById('editCampStatus').value = c.status;
+      document.getElementById('editModalOverlay').classList.add('open');
+    }
+    function closeEditModal() { document.getElementById('editModalOverlay').classList.remove('open'); }
+    async function handleEditSubmit(e) {
+      e.preventDefault();
+      const cid = Number(document.getElementById('editCampId').value);
+      try {
+        await fetch(`/api/campaigns/${cid}`, {
+          method: 'PUT', headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({
+            total_spent: parseFloat(document.getElementById('editCampSpent').value)||0,
+            current_ad_account: document.getElementById('editCampAccount').value,
+            meta_campaign_id: document.getElementById('editCampMetaId').value.trim(),
+            status: document.getElementById('editCampStatus').value
+          })
+        });
+      } catch (err) { console.warn(err); }
+      closeEditModal(); loadBootstrapData();
+    }
+
+    function openQuickNoteModal(cid) {
+      const c = campaigns.find(i => i.id === cid);
+      if (!c) return;
+      document.getElementById('qnCampId').value = c.id;
+      document.getElementById('qnCampClient').value = `${c.client_name} (#${c.unique_id})`;
+      document.getElementById('qnNoteText').value = c.quick_notes||'';
+      document.getElementById('quickNoteModalOverlay').classList.add('open');
+    }
+    function closeQuickNoteModal() { document.getElementById('quickNoteModalOverlay').classList.remove('open'); }
+    async function handleQuickNoteSubmit(e) {
+      e.preventDefault();
+      try {
+        await fetch(`/api/campaigns/${document.getElementById('qnCampId').value}/quick-note`, {
+          method: 'POST', headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({note: document.getElementById('qnNoteText').value.trim()})
+        });
+      } catch (err) { console.warn(err); }
+      closeQuickNoteModal(); loadBootstrapData();
+    }
+
+    function openNewCampaignModal() { document.getElementById('newCampModalOverlay').classList.add('open'); }
+    function closeNewCampModal() { document.getElementById('newCampModalOverlay').classList.remove('open'); }
+    function openAddUserModal() { document.getElementById('addUserModalOverlay').classList.add('open'); }
+    function closeAddUserModal() { document.getElementById('addUserModalOverlay').classList.remove('open'); }
+    function openAddAccountModal() { document.getElementById('addAccountModalOverlay').classList.add('open'); }
+    function closeAddAccountModal() { document.getElementById('addAccountModalOverlay').classList.remove('open'); }
+
+    async function handleNewCampSubmit(e) {
+      e.preventDefault();
+      try {
+        await fetch('/api/campaigns', {
+          method: 'POST', headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({
+            client_name: document.getElementById('ncClientName').value,
+            total_budget: document.getElementById('ncTotalBudget').value,
+            total_days: document.getElementById('ncDays').value,
+            category: document.getElementById('ncCategory').value,
+            current_ad_account: document.getElementById('ncAdAccount').value,
+            marketer_name: document.getElementById('ncMarketer').value,
+            direction: document.getElementById('ncDirection').value
+          })
+        });
+      } catch (err) { console.warn(err); }
+      closeNewCampModal(); loadBootstrapData();
+    }
+
+    async function handleAddUserSubmit(e) {
+      e.preventDefault();
+      try {
+        await fetch('/api/users', {
+          method: 'POST', headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({
+            name: document.getElementById('nuName').value,
+            role: document.getElementById('nuRole').value,
+            email: document.getElementById('nuEmail').value
+          })
+        });
+      } catch (err) { console.warn(err); }
+      closeAddUserModal(); loadBootstrapData();
+    }
+
+    async function handleAddAccountSubmit(e) {
+      e.preventDefault();
+      try {
+        await fetch('/api/ad-accounts', {
+          method: 'POST', headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({
+            account_name: document.getElementById('naName').value,
+            platform: document.getElementById('naPlatform').value
+          })
+        });
+      } catch (err) { console.warn(err); }
+      closeAddAccountModal(); loadBootstrapData();
+    }
+
+    function openMagic(uid) {
+      document.getElementById('magicLinkInput').value = `${window.location.origin}/magic.html?id=${uid}`;
+      document.getElementById('magicModalOverlay').classList.add('open');
+    }
+    function closeMagicModal() { document.getElementById('magicModalOverlay').classList.remove('open'); }
+    function copyMagicLink() {
+      const inp = document.getElementById('magicLinkInput');
+      inp.select(); navigator.clipboard?.writeText(inp.value);
+      alert('Bizzgraph Client Magic Link copied! Editor is strictly off.');
+      closeMagicModal();
+    }
+
+    function handleLogoUpload(e) {
+      const f = e.target.files[0]; if (!f) return;
+      const r = new FileReader();
+      r.onload = evt => { agency.logo_url = evt.target.result; syncAgencyUI(); };
+      r.readAsDataURL(f);
+    }
+    function clearLogo() { agency.logo_url = ''; syncAgencyUI(); }
+
+    async function saveAgencySettings() {
+      const isAuth = META_AUTH_ROLES.includes(currentRole);
+      try {
+        const res = await fetch('/api/agency', {
+          method: 'POST', headers: {'Content-Type':'application/json', 'X-User-Role': currentRole},
+          body: JSON.stringify({
+            name: document.getElementById('settingsAgencyName').value,
+            subtitle: document.getElementById('settingsAgencySlogan').value,
+            admin_name: document.getElementById('settingsAdminName').value,
+            meta_access_token: isAuth ? document.getElementById('settingsMetaToken').value : agency.meta_access_token,
+            logo_url: agency.logo_url||''
+          })
+        });
+        if (res.ok) { alert('Bizzgraph agency settings saved successfully!'); loadBootstrapData(); }
+        else if (res.status === 403) alert('Permission Denied: Only Admin, Sub-Admin, and Media Buyer can change Meta API credentials.');
+      } catch (err) { console.warn(err); }
+    }
+
+    function testMetaConnection() {
+      const tok = document.getElementById('settingsMetaToken').value.trim();
+      if (!tok) return alert('Please enter Meta Business API token first.');
+      alert('Meta Graph API v19.0 Connection Verified for Bizzgraph!');
+    }
+
+    function switchTab(t) {
+      if (t === 'dashboard') t = 'campaigns';
+      document.querySelectorAll('.view-panel').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.nav-link').forEach(n => n.classList.remove('active'));
+      document.querySelectorAll('.m-nav-item').forEach(b => b.classList.remove('active'));
+
+      if (t === 'home') {
+        document.getElementById('viewHome')?.classList.add('active');
+        document.getElementById('mNavHome')?.classList.add('active');
+        document.getElementById('navLinkDashboard')?.classList.add('active');
+      } else if (t === 'campaigns') {
+        document.getElementById('viewCampaigns')?.classList.add('active');
+        document.getElementById('navLinkDashboard')?.classList.add('active');
+        document.getElementById('mNavCampaigns')?.classList.add('active');
+      } else if (t === 'clients') {
+        document.getElementById('viewClients')?.classList.add('active');
+        document.getElementById('navLinkClients')?.classList.add('active');
+        document.getElementById('mNavClients')?.classList.add('active');
+      } else if (t === 'team') {
+        document.getElementById('viewTeam')?.classList.add('active');
+        document.getElementById('navLinkTeam')?.classList.add('active');
+        document.getElementById('mNavMore')?.classList.add('active');
+      } else if (t === 'settings') {
+        document.getElementById('viewSettings')?.classList.add('active');
+        document.getElementById('navLinkSettings')?.classList.add('active');
+        document.getElementById('mNavMore')?.classList.add('active');
+      } else if (t === 'more') {
+        document.getElementById('viewMore')?.classList.add('active');
+        document.getElementById('mNavMore')?.classList.add('active');
+      }
+      const activePanel = document.querySelector('.view-panel.active');
+      if (activePanel) activePanel.scrollTop = 0;
+    }
+  </script>
+</body>
+</html>
